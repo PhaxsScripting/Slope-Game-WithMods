@@ -1,6 +1,7 @@
 (function () {
   const KEY = 'slope_mod_states_v1';
   const NON_PERSISTENT_MODS = new Set(['freezeCamera', 'panicStopInputs', 'autoUnblock10s', 'resetAllMods', 'clearOverlays']);
+  const SAFE_RESTORE_MODS = new Set(['saveStates', 'sortedAlpha', 'showOnlyEnabled', 'hideAlert', 'titleSlope']);
   const body = document.body;
   const game = document.getElementById('gameContainer');
   if (!body || !game) return;
@@ -439,9 +440,16 @@
   removeNode('modFreezeCamera');
 
   mods.forEach((m) => {
-    const initial = NON_PERSISTENT_MODS.has(m.id) ? false : !!persisted[m.id];
+    const initial = SAFE_RESTORE_MODS.has(m.id) && !NON_PERSISTENT_MODS.has(m.id) ? !!persisted[m.id] : false;
     state.mods[m.id] = initial;
-    if (initial) m.apply(true);
+    if (initial) {
+      try {
+        m.apply(true);
+      } catch (err) {
+        state.mods[m.id] = false;
+        console.warn('mod restore skipped', m.id, err);
+      }
+    }
   });
 
   renderList(mods);
