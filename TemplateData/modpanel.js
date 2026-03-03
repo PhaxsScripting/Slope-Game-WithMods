@@ -1,5 +1,6 @@
 (function () {
   const KEY = 'slope_mod_states_v1';
+  const NON_PERSISTENT_MODS = new Set(['freezeCamera', 'panicStopInputs', 'autoUnblock10s', 'resetAllMods', 'clearOverlays']);
   const body = document.body;
   const game = document.getElementById('gameContainer');
   if (!body || !game) return;
@@ -223,13 +224,11 @@
 
 
 
-    { id: 'freezeCamera', name: 'Freeze Camera Overlay', desc: 'Freezes visible camera with a static overlay.', apply: (on)=> {
+    { id: 'freezeCamera', name: 'Freeze Camera Overlay', desc: 'Adds a freeze-style overlay without hiding the game.', apply: (on)=> {
       if (on) {
-        game.style.opacity = '0';
-        const n = modNode('modFreezeCamera', 'position:fixed;inset:0;z-index:10005;background:rgba(10,16,30,.92);color:#fff;display:grid;place-items:center;font:700 22px Inter,Arial,sans-serif;letter-spacing:.4px;pointer-events:none');
+        const n = modNode('modFreezeCamera', 'position:fixed;inset:0;z-index:10005;background:rgba(10,16,30,.38);backdrop-filter:blur(2px);color:#fff;display:grid;place-items:center;font:700 22px Inter,Arial,sans-serif;letter-spacing:.4px;pointer-events:none');
         n.textContent = 'CAMERA FROZEN';
       } else {
-        game.style.opacity = '';
         removeNode('modFreezeCamera');
       }
     } },
@@ -312,6 +311,12 @@
     { id: 'clearOverlays', name: 'Clear All Overlays', desc: 'Removes helper overlays instantly.', apply: (on)=> {
       if (!on) return;
       ['modFreezeCamera','modVignette','modLaneGrid','modCoords','modPressCounter','modScoreHud','modBestScore','modCrosshair','modCenterLine','modEdgeL','modEdgeR'].forEach(removeNode);
+      game.style.opacity = '';
+      game.style.filter = '';
+      game.style.animation = '';
+      game.style.transform = '';
+      game.style.outline = '';
+      game.style.boxShadow = '';
     } },
     { id: 'resetAllMods', name: 'Hard Reset All Mods', desc: 'Disables every mod and resets helpers.', apply: (on)=> {
       if (!on) return;
@@ -396,7 +401,11 @@
     state.mods[id] = enabled;
     const m = mods.find((x)=>x.id===id);
     if (m?.apply) m.apply(enabled);
-    if (state.mods.saveStates) localStorage.setItem(KEY, JSON.stringify(state.mods));
+    if (state.mods.saveStates) {
+      const persistable = { ...state.mods };
+      NON_PERSISTENT_MODS.forEach((modId) => { delete persistable[modId]; });
+      localStorage.setItem(KEY, JSON.stringify(persistable));
+    }
     if (id === 'showOnlyEnabled' || id === 'sortedAlpha') renderList(currentSource());
   }
 
@@ -419,8 +428,18 @@
   search.addEventListener('input', ()=>renderList(currentSource()));
 
   const persisted = JSON.parse(localStorage.getItem(KEY) || '{}');
+
+  // Safety reset so the game is always visible on load even if prior states were aggressive.
+  game.style.opacity = '';
+  game.style.filter = '';
+  game.style.animation = '';
+  game.style.transform = '';
+  game.style.outline = '';
+  game.style.boxShadow = '';
+  removeNode('modFreezeCamera');
+
   mods.forEach((m) => {
-    const initial = !!persisted[m.id];
+    const initial = NON_PERSISTENT_MODS.has(m.id) ? false : !!persisted[m.id];
     state.mods[m.id] = initial;
     if (initial) m.apply(true);
   });
