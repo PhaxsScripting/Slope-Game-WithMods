@@ -1,24 +1,97 @@
-function UnityProgress(gameInstance, progress) {
-  if (!gameInstance.Module)
-    return;
-  if (!gameInstance.logo) {
-    gameInstance.logo = document.createElement("div");
-    gameInstance.logo.className = "logo " + gameInstance.Module.splashScreenStyle;
-    gameInstance.container.appendChild(gameInstance.logo);
-  }
-  if (!gameInstance.progress) {
-    gameInstance.progress = document.createElement("div");
-    gameInstance.progress.className = "progress " + gameInstance.Module.splashScreenStyle;
-    gameInstance.progress.empty = document.createElement("div");
-    gameInstance.progress.empty.className = "empty";
-    gameInstance.progress.appendChild(gameInstance.progress.empty);
-    gameInstance.progress.full = document.createElement("div");
-    gameInstance.progress.full.className = "full";
-    gameInstance.progress.appendChild(gameInstance.progress.full);
-    gameInstance.container.appendChild(gameInstance.progress);
-  }
-  gameInstance.progress.full.style.width = (100 * progress) + "%";
-  gameInstance.progress.empty.style.width = (100 * (1 - progress)) + "%";
-  if (progress == 1)
-    gameInstance.logo.style.display = gameInstance.progress.style.display = "none";
+#modPanelToggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 12000;
+  background: linear-gradient(135deg, #7a5cff, #00c2ff);
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+}
+
+#modPanel {
+  position: fixed;
+  top: 56px;
+  right: 12px;
+  width: min(360px, 92vw);
+  max-height: 80vh;
+  overflow: hidden;
+  z-index: 11999;
+  background: rgba(13, 16, 28, 0.92);
+  color: #e8edff;
+  border: 1px solid rgba(122, 92, 255, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  font-family: Inter, Segoe UI, Arial, sans-serif;
+}
+
+#modPanel.hidden { display: none; }
+#modPanel header { padding: 10px 12px; font-weight: 700; background: rgba(122, 92, 255, 0.2); }
+#modPanel .mod-sub { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+#modPanel .toolbar { display: flex; gap: 8px; padding: 10px; border-bottom: 1px solid rgba(255,255,255,.12); }
+#modPanel input[type="search"] {
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(0,0,0,.25);
+  color: #fff;
+  padding: 8px;
+}
+#modPanel .mod-list { max-height: calc(80vh - 106px); overflow: auto; padding: 0 10px 10px; }
+.mod-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 8px;
+  margin-top: 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.04);
+}
+.mod-title { font-weight: 600; font-size: 13px; }
+.mod-desc { font-size: 11px; opacity: .82; margin-top: 3px; }
+.switch {
+  width: 42px; height: 24px; border-radius: 999px; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.2); position: relative; cursor: pointer;
+}
+.switch::after { content: ''; width: 18px; height: 18px; border-radius: 50%; background: #fff; position: absolute; left: 2px; top: 2px; transition: all .2s; }
+.switch.active { background: #26d47d; }
+.switch.active::after { left: 20px; }
+
+#modFpsCounter {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 11000;
+  background: rgba(0,0,0,.7);
+  color: #00ff95;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font: 12px/1.2 monospace;
+}
+
+body.mod-cinema #gameContainer { filter: contrast(1.2) saturate(1.15); }
+body.mod-wireframe #gameContainer { filter: contrast(1.5) grayscale(1); }
+body.mod-neon #gameContainer { filter: hue-rotate(45deg) saturate(1.8); }
+body.mod-night #gameContainer { filter: brightness(.65) contrast(1.2); }
+body.mod-pastel #gameContainer { filter: brightness(1.1) saturate(.7); }
+body.mod-vhs #gameContainer { filter: sepia(.35) contrast(1.35); }
+body.mod-blur #gameContainer { filter: blur(1.4px); }
+body.mod-sharpen #gameContainer { filter: contrast(1.25); }
+body.mod-invert #gameContainer { filter: invert(1); }
+body.mod-spin #gameContainer { animation: spinHack 12s linear infinite; transform-origin: center center; }
+@keyframes spinHack { to { transform: rotate(360deg); } }
+body.mod-mirror #gameContainer { transform: scaleX(-1); }
+body.mod-tilt #gameContainer { transform: perspective(1000px) rotateY(-8deg); }
+body.mod-zoom #gameContainer { transform: scale(1.08); transform-origin: center center; }
+body.mod-scanlines::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 10000;
+  background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,0,0,.16) 3px, rgba(0,0,0,.16) 4px);
+}
+body.mod-rgbshift #gameContainer { position: relative; }
+body.mod-rgbshift #gameContainer::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(90deg, rgba(255,0,0,.07), transparent, rgba(0,255,255,.07));
 }
