@@ -69,12 +69,50 @@
     if (theme) body.classList.add(theme);
   }
 
+  function modNode(id, style) {
+    let n = document.getElementById(id);
+    if (!n) {
+      n = document.createElement('div');
+      n.id = id;
+      n.style = style;
+      body.appendChild(n);
+    }
+    return n;
+  }
+
+  function removeNode(id) {
+    const n = document.getElementById(id);
+    if (n) n.remove();
+  }
+
+  function setFakeScore(value) {
+    const safe = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    state.mods.fakeScoreValue = safe;
+    localStorage.setItem('slope_fake_score', String(safe));
+    const n = modNode('modScoreHud', 'position:fixed;left:12px;bottom:12px;z-index:11000;background:rgba(0,0,0,.72);color:#fff;padding:6px 9px;border-radius:6px;font:12px monospace');
+    n.textContent = `Score ${safe.toLocaleString()}`;
+  }
+
+  function setGameSpeed(multiplier) {
+    const m = Math.max(0.2, Math.min(4, multiplier));
+    state.mods.gameSpeed = m;
+    stopInterval('speedPulse');
+    if (m === 1) return;
+    const pulse = Math.max(70, Math.round(160 / m));
+    startInterval('speedPulse', () => {
+      pressKey('ArrowLeft');
+      pressKey('ArrowLeft', 'keyup');
+      pressKey('ArrowRight');
+      pressKey('ArrowRight', 'keyup');
+    }, pulse);
+  }
+
   const mods = [
     { id: 'hideAlert', name: 'Hide Promo Banner', desc: 'Removes the top blue promo alert.', apply: (on) => document.querySelector('.alert')?.style.setProperty('display', on ? 'none' : '') },
     { id: 'autoFullscreen', name: 'Auto Fullscreen Prompt', desc: 'Prompts fullscreen when panel opens.', apply: (on) => { if (on) game.requestFullscreen?.().catch(()=>{}); } },
     { id: 'focusGame', name: 'Always Focus Game', desc: 'Focuses game container every second.', apply: (on) => on ? startInterval('focusGame', ()=>game.focus?.(), 1000) : stopInterval('focusGame') },
     { id: 'muteTab', name: 'Mute Tab', desc: 'Mutes all audio output on this page.', apply: (on) => { document.querySelectorAll('audio,video').forEach((m)=>m.muted = on); } },
-    { id: 'titleSlope', name: 'Custom Title', desc: 'Renames tab title to Slope Modded.', apply: (on) => { document.title = on ? 'Slope Modded x50' : original.title; } },
+    { id: 'titleSlope', name: 'Custom Title', desc: 'Renames tab title to Slope Modded.', apply: (on) => { document.title = on ? 'Slope Modded x80' : original.title; } },
 
     { id: 'themeCinema', name: 'Cinema Contrast', desc: 'Sharper high-contrast visuals.', apply: (on)=> on ? setTheme('mod-cinema') : setTheme('') },
     { id: 'themeWireframe', name: 'Wireframe Vision', desc: 'Grayscale high contrast style.', apply: (on)=> on ? setTheme('mod-wireframe') : setTheme('') },
@@ -183,6 +221,109 @@
     { id: 'trailRight', name: 'Right Trail Indicator', desc: 'Flashes right indicator every right press.', apply: (on)=> indicatorHook('ArrowRight', '#ff7f00', on) },
     { id: 'jumpIndicator', name: 'Jump Indicator', desc: 'Flashes top indicator on jump.', apply: (on)=> indicatorHook('Space', '#7dff00', on) },
 
+
+
+    { id: 'freezeCamera', name: 'Freeze Camera Overlay', desc: 'Freezes visible camera with a static overlay.', apply: (on)=> {
+      if (on) {
+        game.style.opacity = '0';
+        const n = modNode('modFreezeCamera', 'position:fixed;inset:0;z-index:10005;background:rgba(10,16,30,.92);color:#fff;display:grid;place-items:center;font:700 22px Inter,Arial,sans-serif;letter-spacing:.4px;pointer-events:none');
+        n.textContent = 'CAMERA FROZEN';
+      } else {
+        game.style.opacity = '';
+        removeNode('modFreezeCamera');
+      }
+    } },
+    { id: 'cameraDim', name: 'Dim Camera 30%', desc: 'Darkens viewport for focus training.', apply: (on)=> game.style.filter = on ? 'brightness(.7)' : '' },
+    { id: 'cameraLight', name: 'Bright Camera 120%', desc: 'Boosts viewport brightness.', apply: (on)=> game.style.filter = on ? 'brightness(1.2)' : '' },
+    { id: 'speedNormal', name: 'Speed Normal (1.0x)', desc: 'Resets helper speed to normal.', apply: (on)=> { if (on) setGameSpeed(1); } },
+    { id: 'speedPlus10', name: 'Speed Assist +10%', desc: 'Adds light pace assist pulses.', apply: (on)=> on ? setGameSpeed(1.1) : setGameSpeed(1) },
+    { id: 'speedPlus25', name: 'Speed Assist +25%', desc: 'Adds medium pace assist pulses.', apply: (on)=> on ? setGameSpeed(1.25) : setGameSpeed(1) },
+    { id: 'speedPlus50', name: 'Speed Assist +50%', desc: 'Adds aggressive pace assist pulses.', apply: (on)=> on ? setGameSpeed(1.5) : setGameSpeed(1) },
+    { id: 'speedSlow80', name: 'Slow Assist 0.8x', desc: 'Slows helper pulse cadence.', apply: (on)=> on ? setGameSpeed(0.8) : setGameSpeed(1) },
+    { id: 'speedSlow60', name: 'Slow Assist 0.6x', desc: 'Very slow helper pulse cadence.', apply: (on)=> on ? setGameSpeed(0.6) : setGameSpeed(1) },
+    { id: 'score1k', name: 'Set Score 1,000', desc: 'Sets custom score HUD to 1,000.', apply: (on)=> { if (on) setFakeScore(1000); } },
+    { id: 'score10k', name: 'Set Score 10,000', desc: 'Sets custom score HUD to 10,000.', apply: (on)=> { if (on) setFakeScore(10000); } },
+    { id: 'score100k', name: 'Set Score 100,000', desc: 'Sets custom score HUD to 100,000.', apply: (on)=> { if (on) setFakeScore(100000); } },
+    { id: 'scoreCustom', name: 'Set Score (Custom)', desc: 'Prompts user for score HUD value.', apply: (on)=> {
+      if (!on) return;
+      const raw = prompt('Enter your custom score value:');
+      if (raw == null) return;
+      const parsed = Number(raw.replace(/,/g, ''));
+      if (Number.isFinite(parsed)) setFakeScore(parsed);
+    } },
+    { id: 'scoreHud', name: 'Show Score HUD', desc: 'Pins custom score HUD on-screen.', apply: (on)=> on ? setFakeScore(Number(localStorage.getItem('slope_fake_score') || 0)) : removeNode('modScoreHud') },
+    { id: 'scoreTickerUp', name: 'Auto Score +250/s', desc: 'Increments custom score every second.', apply: (on)=> on ? startInterval('scoreTickerUp', ()=>setFakeScore((state.mods.fakeScoreValue || 0) + 250), 1000) : stopInterval('scoreTickerUp') },
+    { id: 'scoreTickerDown', name: 'Auto Score -100/s', desc: 'Drains custom score every second.', apply: (on)=> on ? startInterval('scoreTickerDown', ()=>setFakeScore((state.mods.fakeScoreValue || 0) - 100), 1000) : stopInterval('scoreTickerDown') },
+    { id: 'sessionBest', name: 'Track Session Best', desc: 'Stores highest custom score this session.', apply: (on)=> {
+      if (!on) return removeNode('modBestScore');
+      const n = modNode('modBestScore', 'position:fixed;left:12px;bottom:44px;z-index:11000;background:rgba(0,0,0,.6);color:#9cf;padding:4px 8px;border-radius:6px;font:11px monospace');
+      startInterval('sessionBest', ()=> {
+        const best = Math.max(Number(sessionStorage.getItem('slope_session_best') || 0), Number(state.mods.fakeScoreValue || 0));
+        sessionStorage.setItem('slope_session_best', String(best));
+        n.textContent = `Session Best ${best.toLocaleString()}`;
+      }, 800);
+    } },
+    { id: 'cameraShake', name: 'Camera Shake FX', desc: 'Applies subtle shake animation.', apply: (on)=> game.style.animation = on ? 'shakeFx .13s infinite' : '' },
+    { id: 'ghostGame', name: 'Ghost Transparency', desc: 'Makes game viewport semi-transparent.', apply: (on)=> game.style.opacity = on ? '.8' : '' },
+    { id: 'focusVignette', name: 'Focus Vignette', desc: 'Adds dark edge vignette overlay.', apply: (on)=> {
+      if (on) modNode('modVignette', 'position:fixed;inset:0;pointer-events:none;z-index:10003;background:radial-gradient(circle at center, transparent 45%, rgba(0,0,0,.55) 100%)');
+      else removeNode('modVignette');
+    } },
+    { id: 'laneGrid', name: 'Lane Grid Overlay', desc: 'Adds transparent grid to align movement.', apply: (on)=> {
+      if (on) modNode('modLaneGrid', 'position:fixed;inset:0;pointer-events:none;z-index:10003;background-image:linear-gradient(rgba(0,255,255,.08) 1px, transparent 1px),linear-gradient(90deg, rgba(0,255,255,.08) 1px, transparent 1px);background-size:50px 50px');
+      else removeNode('modLaneGrid');
+    } },
+    { id: 'leftPulseAssist', name: 'Left Pulse Assist', desc: 'Left tap every 700ms.', apply: (on)=> on ? startInterval('leftPulseAssist', ()=>{pressKey('ArrowLeft'); pressKey('ArrowLeft','keyup');}, 700) : stopInterval('leftPulseAssist') },
+    { id: 'rightPulseAssist', name: 'Right Pulse Assist', desc: 'Right tap every 700ms.', apply: (on)=> on ? startInterval('rightPulseAssist', ()=>{pressKey('ArrowRight'); pressKey('ArrowRight','keyup');}, 700) : stopInterval('rightPulseAssist') },
+    { id: 'microZigzag', name: 'Micro Zig-Zag', desc: 'Quick tiny alternating taps.', apply: (on)=> {
+      if (!on) return stopInterval('microZigzag');
+      let left = true;
+      startInterval('microZigzag', ()=>{ pressKey(left ? 'ArrowLeft' : 'ArrowRight'); pressKey(left ? 'ArrowLeft' : 'ArrowRight', 'keyup'); left = !left; }, 180);
+    } },
+    { id: 'panicStopInputs', name: 'Panic Stop Inputs', desc: 'Temporarily blocks left/right/space.', apply: (on)=> {
+      blockKey('ArrowLeft', on); blockKey('ArrowRight', on); blockKey('Space', on);
+    } },
+    { id: 'autoUnblock10s', name: 'Auto Unblock in 10s', desc: 'If panic mode is on, auto-clears after 10s.', apply: (on)=> {
+      if (!on) return;
+      setTimeout(()=>{
+        applyMod('panicStopInputs', false);
+        renderList(currentSource());
+      }, 10000);
+    } },
+    { id: 'hudCoords', name: 'Mouse Coords HUD', desc: 'Shows cursor coordinates for alignment.', apply: (on)=> {
+      const id = 'hudCoordsMove';
+      if (on && !state.intervals[id]) {
+        const n = modNode('modCoords', 'position:fixed;right:12px;bottom:40px;z-index:11000;background:rgba(0,0,0,.6);color:#fff;padding:4px 8px;border-radius:6px;font:11px monospace');
+        state.intervals[id] = (e)=> n.textContent = `x:${e.clientX} y:${e.clientY}`;
+        document.addEventListener('mousemove', state.intervals[id]);
+      }
+      if (!on && state.intervals[id]) { document.removeEventListener('mousemove', state.intervals[id]); delete state.intervals[id]; removeNode('modCoords'); }
+    } },
+    { id: 'pressCounter', name: 'Input Press Counter', desc: 'Counts left/right/space key presses.', apply: (on)=> {
+      const id = 'pressCounterHook';
+      if (on && !state.intervals[id]) {
+        const counts = { ArrowLeft: 0, ArrowRight: 0, Space: 0 };
+        const n = modNode('modPressCounter', 'position:fixed;right:12px;bottom:12px;z-index:11000;background:rgba(0,0,0,.7);color:#7dffea;padding:6px 8px;border-radius:6px;font:11px monospace');
+        state.intervals[id] = (e)=> { if (counts[e.code] !== undefined) { counts[e.code] += 1; n.textContent = `L:${counts.ArrowLeft} R:${counts.ArrowRight} J:${counts.Space}`; } };
+        document.addEventListener('keydown', state.intervals[id]);
+      }
+      if (!on && state.intervals[id]) { document.removeEventListener('keydown', state.intervals[id]); delete state.intervals[id]; removeNode('modPressCounter'); }
+    } },
+    { id: 'clearOverlays', name: 'Clear All Overlays', desc: 'Removes helper overlays instantly.', apply: (on)=> {
+      if (!on) return;
+      ['modFreezeCamera','modVignette','modLaneGrid','modCoords','modPressCounter','modScoreHud','modBestScore','modCrosshair','modCenterLine','modEdgeL','modEdgeR'].forEach(removeNode);
+    } },
+    { id: 'resetAllMods', name: 'Hard Reset All Mods', desc: 'Disables every mod and resets helpers.', apply: (on)=> {
+      if (!on) return;
+      mods.forEach((m)=> { if (m.id !== 'resetAllMods' && state.mods[m.id]) applyMod(m.id, false); });
+      setGameSpeed(1);
+      game.style.opacity = '';
+      game.style.filter = '';
+      game.style.animation = '';
+      removeNode('modFreezeCamera');
+      renderList(currentSource());
+    } },
+
     { id: 'autoPanelPin', name: 'Pin Mod Panel', desc: 'Keeps panel always open.', apply: (on)=> { if (on) panel.classList.remove('hidden'); } },
     { id: 'sortedAlpha', name: 'Sort Mods A-Z', desc: 'Sorts the panel alphabetically.', apply: (on)=> renderList(on ? [...mods].sort((a,b)=>a.name.localeCompare(b.name)) : mods) },
     { id: 'showOnlyEnabled', name: 'Show Enabled Only', desc: 'Filters panel to active mods.', apply: ()=> renderList(currentSource()) },
@@ -228,14 +369,19 @@
 
   const toggleBtn = document.createElement('button');
   toggleBtn.id = 'modPanelToggle';
-  toggleBtn.textContent = 'Mods (50)';
+  toggleBtn.textContent = 'Mods (80)';
   const panel = document.createElement('aside');
   panel.id = 'modPanel';
-  panel.innerHTML = `<header>Slope Mod Panel<div class="mod-sub">50 client-side mods / helpers</div></header>
+  panel.innerHTML = `<header>Slope Mod Panel<div class="mod-sub">80 client-side mods / helpers</div></header>
     <div class="toolbar"><input id="modSearch" type="search" placeholder="Search mods..."></div>
     <div class="mod-list" id="modList"></div>`;
 
   body.append(toggleBtn, panel);
+
+  const runtimeStyles = document.createElement('style');
+  runtimeStyles.textContent = '@keyframes shakeFx { 0%{transform:translate(0,0)} 25%{transform:translate(1px,-1px)} 50%{transform:translate(-1px,1px)} 75%{transform:translate(1px,1px)} 100%{transform:translate(0,0)} }';
+  document.head.appendChild(runtimeStyles);
+
 
   toggleBtn.addEventListener('click', () => {
     panel.classList.toggle('hidden');
